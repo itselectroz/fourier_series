@@ -2,7 +2,10 @@
 let t = 0;
 
 let path = [];
-let circles = [];
+let xvals = yvals = [];
+
+const USER = 0;
+const FOURIER = 1;
 
 function fourierTransform(values)
 {
@@ -45,8 +48,37 @@ function fourierTransform(values)
 
 function setup() {
 	createCanvas(windowWidth, windowHeight);
-	circles = fourierTransform([100, -100, 100, -100, 100, -100, 100, -100, -100]);
-	console.log(circles);
+	xvals = fourierTransform([100, -100, 100, -100, 100, -100, 100, -100, -100, -100, -100, -100]); // sine wave with weird change at the end
+	yvals = fourierTransform([100, -100, 100, -100, 100, -100, 100, -100, -100, -100, -100, -100]); // sine wave with weird change at the end
+	console.log(xvals);
+}
+
+let x = y = 0;
+
+function doCircle(vals, sx, sy)
+{
+	x = y = 0;
+
+	let n = vals.length;
+
+	for(let i = 0; i < n; i++)
+	{
+		let px = x;
+		let py = y;
+
+		let circle = vals[i];
+
+		let r = circle.amp;
+
+		ellipse(sx + px,sy + py, r*2, r*2);
+
+		x += r*cos(circle.freq * t + circle.phase);
+		y += r*sin(circle.freq * t + circle.phase);
+
+		line(sx + px, sy + py, sx + x, sy + y);
+	}
+
+	return createVector(x, y);
 }
 
 function draw() {
@@ -54,37 +86,19 @@ function draw() {
 	stroke(255);
 	noFill();
 
-	translate(width/4, height/2);
+	let vec1 = doCircle(xvals, (3*width)/4, height/5);
+	let vec2 = doCircle(yvals, width/5, 2*height/3);
 
-	let px = py = 0;
+	path.unshift(createVector(vec1.x, vec2.y));
 
-	let n = circles.length;
-
-	for(let i = 0; i < n; i++)
-	{
-		let circle = circles[i];
-
-		let r = circle.amp;
-
-		ellipse(px,py, r*2, r*2);
-
-		let x = px + r*cos(circle.freq * t + circle.phase);
-		let y = py + r*sin(circle.freq * t + circle.phase);
-
-		line(px, py, x, y);
-
-		px = x;
-		py = y;
-	}
-
-	line(px, py, width/3, py);
-
-	path.unshift(py);
+	line((3*width)/4 + vec1.x, vec1.y + height/5, (3*width)/4 + vec1.x, 2*height/3 + vec2.y);
+	line(vec2.x + width/5, vec2.y + 2*height/3, vec1.x + (3*width)/4, vec2.y + 2*height/3);
 
 	beginShape();
-	for(let i = path.length; i >= 0; i--)
+	for(let i = path.length-1; i >= 0; i--)
 	{
-		vertex(width/3 + i, path[i]);
+		let vec = path[i];
+		vertex((3*width)/4 + vec.x, 2*height/3 + vec.y);
 	}
 	endShape();
 
