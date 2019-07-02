@@ -2,10 +2,12 @@
 let t = 0;
 
 let path = [];
-let xvals = yvals = [];
+let xvals;
+let yvals;
 
 const USER = 0;
 const FOURIER = 1;
+
 
 function fourierTransform(values)
 {
@@ -13,23 +15,23 @@ function fourierTransform(values)
 	
 	let N = values.length;
 
-	for(let k = 0; k < N; ++k)
+	for(let k = 0; k < N; k++)
 	{
 		let real = 0;
 		let imag = 0;
 
-		for(let n = 0; n < N; ++n)
+		for(let n = 0; n < N; n++)
 		{
 			let angle = (TWO_PI*k*n)/N;
 			real += values[n] * cos(angle);
-			imag += values[n] * sin(angle);
+			imag -= values[n] * sin(angle);
 		}
 
 		real = real / N;
 		imag = imag / N;
 
 		let freq = k;
-		let amp = sqrt(pow(real, 2) + pow(imag, 2));
+		let amp = sqrt(real * real + imag * imag);
 		let phase = atan2(imag, real);
 
 		returns.push({
@@ -41,23 +43,38 @@ function fourierTransform(values)
 		});
 	}
 
-	returns.sort((x,y) => y.amp - x.amp);
+	//returns.sort((x,y) => y.amp - x.amp);
 
 	return returns;
 }
 
 function setup() {
 	createCanvas(windowWidth, windowHeight);
-	xvals = fourierTransform([100, -100, 100, -100, 100, -100, 100, -100, -100, -100, -100, -100]); // sine wave with weird change at the end
-	yvals = fourierTransform([100, -100, 100, -100, 100, -100, 100, -100, -100, -100, -100, -100]); // sine wave with weird change at the end
+	let xx = [];
+	let yy = [];
+
+	for(let i = 0; i < 100; i++)
+	{
+		xx[i] = 100 * cos(map(i, 0, 100, 0, TWO_PI));
+		yy[i] = 100 * sin(map(i, 0, 100, 0, TWO_PI));
+	}
+
+	xvals = fourierTransform(xx); // sine wave with weird change at the end
+	yvals = fourierTransform(yy); // sine wave with weird change at the end
+
+	xvals.sort((x,y) => y.amp - x.amp);
+	yvals.sort((x,y) => y.amp - x.amp);
+
 	console.log(xvals);
 }
 
-let x = y = 0;
+let x = 0;
+let y = 0;
 
-function doCircle(vals, sx, sy)
+function doCircle(vals, sx, sy, rot)
 {
-	x = y = 0;
+	x = sx;
+	y = sy;
 
 	let n = vals.length;
 
@@ -70,12 +87,12 @@ function doCircle(vals, sx, sy)
 
 		let r = circle.amp;
 
-		ellipse(sx + px,sy + py, r*2, r*2);
+		ellipse(px,py, r*2, r*2);
 
-		x += r*cos(circle.freq * t + circle.phase);
-		y += r*sin(circle.freq * t + circle.phase);
+		x += r*cos(circle.freq * t + circle.phase + rot);
+		y += r*sin(circle.freq * t + circle.phase + rot);
 
-		line(sx + px, sy + py, sx + x, sy + y);
+		line(px, py, x, y);
 	}
 
 	return createVector(x, y);
@@ -86,27 +103,30 @@ function draw() {
 	stroke(255);
 	noFill();
 
-	let vec1 = doCircle(xvals, (3*width)/4, height/5);
-	let vec2 = doCircle(yvals, width/5, 2*height/3);
+	let vec1 = doCircle(xvals, (3*width)/4, height/5, 0);
+	let vec2 = doCircle(yvals, width/5, 2*height/3,HALF_PI);
 
-	path.unshift(createVector(vec1.x, vec2.y));
+	let v = createVector(vec1.x, vec2.y);
+	path.unshift(v);
 
-	line((3*width)/4 + vec1.x, vec1.y + height/5, (3*width)/4 + vec1.x, 2*height/3 + vec2.y);
-	line(vec2.x + width/5, vec2.y + 2*height/3, vec1.x + (3*width)/4, vec2.y + 2*height/3);
+	line(vec1.x, vec1.y, v.x, v.y);
+	line(vec2.x, vec2.y, v.x, v.y);
+
+	
 
 	beginShape();
 	for(let i = path.length-1; i >= 0; i--)
 	{
 		let vec = path[i];
-		vertex((3*width)/4 + vec.x, 2*height/3 + vec.y);
+		vertex(vec.x, vec.y);
 	}
 	endShape();
 
-	if(path.length > 1000)
-		path.pop();
+	t += (TWO_PI/yvals.length);
 
-	t -= 0.01;
-
-	if(t <= -TWO_PI)
+	if(t > TWO_PI)
+	{
 		t = 0;
+		path = [];
+	}
 }
