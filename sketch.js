@@ -2,11 +2,16 @@
 let t = 0;
 
 let path = [];
-let xvals;
-let yvals;
 
-const USER = 0;
-const FOURIER = 1;
+const states = {
+	DRAWING: 0,
+	FOURIER: 1
+}
+
+let state = states.FOURIER;
+
+let xvals = [];
+let yvals = [];
 
 
 function fourierTransform(values)
@@ -43,7 +48,7 @@ function fourierTransform(values)
 		});
 	}
 
-	//returns.sort((x,y) => y.amp - x.amp);
+	returns.sort((x,y) => y.amp - x.amp);
 
 	return returns;
 }
@@ -59,11 +64,8 @@ function setup() {
 		yy[i] = 100 * sin(map(i, 0, 100, 0, TWO_PI));
 	}
 
-	xvals = fourierTransform(xx); // sine wave with weird change at the end
-	yvals = fourierTransform(yy); // sine wave with weird change at the end
-
-	xvals.sort((x,y) => y.amp - x.amp);
-	yvals.sort((x,y) => y.amp - x.amp);
+	xvals = fourierTransform(xx);
+	yvals = fourierTransform(yy);
 
 	console.log(xvals);
 }
@@ -98,35 +100,77 @@ function doCircle(vals, sx, sy, rot)
 	return createVector(x, y);
 }
 
+function mousePressed()
+{
+	xvals = [];
+	yvals = [];
+	state = states.DRAWING;
+	path = [];
+	t = 0;
+	return false;
+}
+
+function mouseDragged()
+{
+	xvals.push(mouseX - width/2);
+	yvals.push(mouseY - height/2);
+	return false;
+}
+
+function mouseReleased()
+{
+	xvals = fourierTransform(xvals);
+	yvals = fourierTransform(yvals);
+	state = states.FOURIER;
+	return false;
+}
+
 function draw() {
 	background(0);
 	stroke(255);
 	noFill();
 
-	let vec1 = doCircle(xvals, (3*width)/4, height/5, 0);
-	let vec2 = doCircle(yvals, width/5, 2*height/3,HALF_PI);
 
-	let v = createVector(vec1.x, vec2.y);
-	path.unshift(v);
-
-	line(vec1.x, vec1.y, v.x, v.y);
-	line(vec2.x, vec2.y, v.x, v.y);
-
-	
-
-	beginShape();
-	for(let i = path.length-1; i >= 0; i--)
+	if(state == states.FOURIER)
 	{
-		let vec = path[i];
-		vertex(vec.x, vec.y);
+		let vec1 = doCircle(xvals, width/2 - 50, height/9, 0);
+		let vec2 = doCircle(yvals, width/5, height/2,HALF_PI);
+
+		let v = createVector(vec1.x, vec2.y);
+		path.unshift(v);
+
+		line(vec1.x, vec1.y, v.x, v.y);
+		line(vec2.x, vec2.y, v.x, v.y);
+
+		
+
+		beginShape();
+		for(let i = path.length-1; i >= 0; i--)
+		{
+			let vec = path[i];
+			vertex(vec.x, vec.y);
+		}
+		endShape();
+
+		t += (2*TWO_PI/yvals.length);
+
+		if(t > TWO_PI)
+		{
+			t = 0;
+			path = [];
+		}
 	}
-	endShape();
-
-	t += (TWO_PI/yvals.length);
-
-	if(t > TWO_PI)
+	else if(state == states.DRAWING)
 	{
-		t = 0;
-		path = [];
+		// we need to draw what is currently in each part.
+
+		beginShape();
+
+		let n = xvals.length;
+		for(let i = 0; i < n; i++)
+		{
+			vertex(xvals[i] + width/2, yvals[i] + height / 2);
+		}
+		endShape();
 	}
 }
